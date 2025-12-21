@@ -1,4 +1,5 @@
 const prisma = require("./db");
+const { Prisma } = require("@prisma/client");
 
 /**
  * ctx = { productId, variantId, quantity, userTier?, promoCode? }
@@ -35,52 +36,74 @@ async function calculatePrice(ctx) {
       ? v.toNumber()
       : Number(v);
 
-  const basePrice = toNum(baseRaw);
-  const priceAdj = toNum(adjRaw);
+  let unitPrice = new Prisma.Decimal(variant.product.basePrice);
 
-  let unitPrice = basePrice + (priceAdj || 0);
+if (variant.priceAdjustment) {
+  unitPrice = unitPrice.plus(variant.priceAdjustment);
+}
+
 
   const discounts = [];
   const now = new Date();
+ const rules = await prisma.pricingRule.findMany({
+  where: { isActive: true },
+  orderBy: { priority: "desc" }, // higher priority first
+ });
 
-  const rules = await prisma.pricingRule.findMany({
-    where: { isActive: true },
-    orderBy: { priority: "asc" },
-  });
+  // Apply rules in hierarchy
+// 1. SEASONAL
+// 2. USER_TIER
+// 3. BULK (ONLY ONE – highest priority)
+// 4. PROMO_CODE
 
-  for (const rule of rules) {
-    const conditions = rule.conditions || {};
-    const result = applyRule({
-      rule,
-      conditions,
-      currentUnitPrice: unitPrice,
-      quantity,
-      userTier,
-      promoCode,
-      now,
-    });
+let bulkApplied = false;
 
-    if (result.applied) {
-      unitPrice = result.newUnitPrice;
-      discounts.push({
-        type: rule.type,
-        amount: result.discountAmount,
-        description: result.description,
-      });
-    }
+
+for (const rule of rules) {
+  if (rule.type === "BULK" && bulkApplied) {
+    continue; // 🚫 skip other BULK rules
   }
 
-  const finalUnitPrice = unitPrice;
-  const total = finalUnitPrice * quantity;
-
-  return {
-    productId,
-    variantId,
+  const conditions = rule.conditions || {};
+  const result = applyRule({
+    rule,
+    conditions,
+    currentUnitPrice: unitPrice,
     quantity,
-    unitPrice: finalUnitPrice,
-    total,
-    discounts,
-  };
+    userTier,
+    promoCode,
+    now,
+  });
+
+  if (result.applied) {
+    unitPrice = result.newUnitPrice;
+    discounts.push({
+      type: rule.type,
+      amount: result.discountAmount,
+      description: result.description,
+    });
+
+    if (rule.type === "BULK") {
+      bulkApplied = true; // ✅ stop more BULK discounts
+    }
+  }
+}
+
+
+  
+const finalUnitPrice = unitPrice;
+const total = unitPrice.mul(quantity);
+
+return {
+  productId,
+  variantId,
+  quantity,
+  unitPrice: finalUnitPrice.toFixed(2),
+  total: total.toFixed(2),
+  discounts,
+};
+
+  
 }
 
 function applyRule({
@@ -139,8 +162,9 @@ function applyRule({
       : Number(rule.discountValue);
 
   if (rule.discountType === "PERCENTAGE") {
-    discountAmount = (currentUnitPrice * discountVal) / 100;
-    newUnitPrice = currentUnitPrice - discountAmount;
+   discountAmount = currentUnitPrice.mul(discountVal).div(100);
+newUnitPrice = currentUnitPrice.sub(discountAmount);
+
   } else if (rule.discountType === "FIXED_AMOUNT") {
     discountAmount = discountVal;
     newUnitPrice = currentUnitPrice - discountAmount;

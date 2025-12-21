@@ -375,3 +375,10 @@ prisma.config.ts
 Mounika Bandharu
 GitHub: https://github.com/Mounika4406
 >>>>>>> Stashed changes
+## Architecture Improvements
+
+- Routes separated from business logic
+- Controllers handle request/response
+- Services manage core logic
+- Background jobs isolated from API process
+- User context injected via middleware
