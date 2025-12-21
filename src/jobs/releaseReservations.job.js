@@ -1,4 +1,5 @@
-const prisma = require("../db");
+const prisma = require("../services/db");
+
 
 module.exports = async function releaseExpiredReservations() {
   const now = new Date();

@@ -382,3 +382,27 @@ GitHub: https://github.com/Mounika4406
 - Services manage core logic
 - Background jobs isolated from API process
 - User context injected via middleware
+## Setup
+npm install
+npx prisma migrate deploy
+npm run dev
+
+## API Endpoints
+POST   /cart/items
+GET    /cart
+PUT    /cart/items/:id
+POST   /cart/checkout
+
+## Assumptions
+- Single active cart per user
+- Price snapshot stored at add-to-cart time
+- Authentication simulated via middleware
+
+## Design Decisions
+- Prisma used for data integrity
+- Snapshot pricing avoids price drift
+- Reservation expiry prevents stock lock
+
+## Known Limitations
+- Simulated auth
+- No payment gateway

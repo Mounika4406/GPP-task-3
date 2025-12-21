@@ -1,90 +1,90 @@
-datasource db {
-  provider = "postgresql"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * MODELS
+ */
 
 model Category {
   id       Int        @id @default(autoincrement())
   name     String
   parentId Int?
-  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryToCategory")
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
   products Product[]
 }
 
 model Product {
   id          Int       @id @default(autoincrement())
   name        String
-  description String?
+  description String
   basePrice   Decimal
-  status      String // "active" | "archived"
+  status      String
   categoryId  Int
   category    Category  @relation(fields: [categoryId], references: [id])
   variants    Variant[]
 }
 
 model Variant {
-  id               Int      @id @default(autoincrement())
+  id               Int        @id @default(autoincrement())
   productId        Int
-  product          Product  @relation(fields: [productId], references: [id])
-  sku              String   @unique
-  attributes       Json?
+  sku              String     @unique
+  attributes       Json
   stockQuantity    Int
-  reservedQuantity Int      @default(0)
+  reservedQuantity Int        @default(0)
   priceAdjustment  Decimal?
-
-  cartItems  CartItem[]
-  orderItems OrderItem[]
+  product          Product    @relation(fields: [productId], references: [id])
+  cartItems        CartItem[]
 }
 
 model PricingRule {
   id            Int     @id @default(autoincrement())
-  type          String // "SEASONAL" | "BULK" | "USER_TIER" | "PROMO_CODE"
+  type          String
   priority      Int
-  isActive      Boolean @default(true)
-  conditions    Json // e.g. { "minQuantity": 10 } or { "userTier": "GOLD" }
-  discountType  String // "PERCENTAGE" | "FIXED_AMOUNT"
+  conditions    Json
+  discountType  String
   discountValue Decimal
+  isActive      Boolean @default(true)
 }
 
 model Cart {
   id        Int        @id @default(autoincrement())
   userId    Int?
-  status    String     @default("ACTIVE")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  status    String
   items     CartItem[]
+  createdAt DateTime   @default(now())
 }
 
 model CartItem {
-  id                        Int       @id @default(autoincrement())
-  cartId                    Int
-  cart                      Cart      @relation(fields: [cartId], references: [id])
-  variantId                 Int
-  variant                   Variant   @relation(fields: [variantId], references: [id])
-  quantity                  Int
-  priceSnapshotUnit         Decimal
+  id                       Int      @id @default(autoincrement())
+  cartId                   Int
+  variantId                Int
+  quantity                 Int
+  priceSnapshotUnit        Decimal
   discountBreakdownSnapshot Json?
-  reservationExpiresAt      DateTime?
+  reservationExpiresAt     DateTime?
 }
+
 
 model Order {
   id        Int         @id @default(autoincrement())
   userId    Int?
   total     Decimal
-  createdAt DateTime    @default(now())
   items     OrderItem[]
+  createdAt DateTime    @default(now())
 }
 
 model OrderItem {
   id        Int     @id @default(autoincrement())
   orderId   Int
-  order     Order   @relation(fields: [orderId], references: [id])
   variantId Int
-  variant   Variant @relation(fields: [variantId], references: [id])
   quantity  Int
-  price     Decimal // unit price snapshot
+  price     Decimal
+  order     Order   @relation(fields: [orderId], references: [id])
 }

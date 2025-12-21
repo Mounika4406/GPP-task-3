@@ -23,18 +23,19 @@
 //     next(err);
 //   }
 // };
-const { calculatePrice } = require("../pricingEngine");
+const prisma = require("../services/db");
+
+const { calculatePrice } = require("../services/pricingEngine");
+
 
 exports.getPrice = async (req, res, next) => {
   try {
-    const productId = Number(req.params.productId);
-    const variantId = Number(req.params.variantId);
-    const quantity = Number(req.query.quantity || 1);
-
     const result = await calculatePrice({
-      productId,
-      variantId,
-      quantity,
+      productId: Number(req.params.productId),
+      variantId: Number(req.params.variantId),
+      quantity: Number(req.query.quantity || 1),
+      userTier: req.user.tier,   // ✅ FROM AUTH
+      promoCode: req.query.promoCode,
     });
 
     res.json(result);
@@ -42,4 +43,3 @@ exports.getPrice = async (req, res, next) => {
     next(err);
   }
 };
-
