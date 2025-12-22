@@ -406,6 +406,11 @@ POST   /cart/checkout
 ## Known Limitations
 - Simulated auth
 - No payment gateway
-## Authentication Note
-This project uses a mocked authentication middleware that reads user context
-from request headers (x-user-id, x-user-tier) for simplicity and evaluation purposes.
+## Authentication
+This project uses a mocked authentication middleware.
+User context is provided via request headers:
+- x-user-id
+- x-user-tier
+
+This approach keeps the focus on backend architecture and business logic.
+
