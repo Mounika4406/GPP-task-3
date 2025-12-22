@@ -1,8 +1,14 @@
 module.exports = (req, res, next) => {
-  // TEMP simulated user
+  const userId = req.header("x-user-id");
+
+  if (!userId) {
+    return res.status(401).json({ error: "User required" });
+  }
+
   req.user = {
-    id: 1,
-    tier: "GOLD",
+    id: Number(userId),
+    tier: req.header("x-user-tier") || "REGULAR"
   };
+
   next();
 };

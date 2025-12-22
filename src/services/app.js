@@ -14,12 +14,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use(auth);
-
+// ✅ PUBLIC ROUTES (NO AUTH)
 app.use(healthRoutes);
 app.use(pricingRoutes);
+
+// 🔐 PROTECTED ROUTES
+app.use(auth);
 app.use(cartRoutes);
 
+// ❗ ERROR HANDLER LAST
 app.use(errorHandler);
+
 
 module.exports = app;
